@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4f6f8" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme:dark)">
 <title>Rail &amp; bus network — Catalonia, Andorra, Spain &amp; France</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -313,6 +315,25 @@
  .stopfilter .poirow .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
  .stopfilter .poirow .n{margin-left:auto;color:var(--muted);font-size:10.5px}
  @media (pointer:coarse){ .stopfilter .poirow{padding:6px 0} }
+ @media (pointer:coarse){
+   /* THE iOS ZOOM TRAP. Safari zooms in on any focused field under 16px, and this page is
+      overflow:hidden, so the reader cannot scroll the layout back — it just stays too big.
+      16px is heavier than the design wants; it is also the only way out. */
+   .search input,.cityfilter select{font-size:16px}
+   /* 44px, because that is what a finger is. These rows carry a checkbox and a colour swatch
+      in 21-26px, which is how you toggle the line above the one you meant. */
+   .sub,.cat>label,.ln,.stop,.cityhd,.poirow,.stopfilter .poirow{min-height:44px}
+   .sub,.ln,.stop,.cityhd{padding-top:0;padding-bottom:0}
+   input[type=checkbox]{width:18px;height:18px}
+   .x,#poiClose{min-width:40px;min-height:40px}
+   /* Information printed too small to read, and greys too pale to see. The muted grey was
+      about 2.4:1 on the card, well under the 4.5:1 floor. */
+   .ln,.stop,.sub{font-size:13px}
+   .hint,.cityhd,.stopfilter .poirow,.stopfilter .poirow .n,.cityhd .cn{font-size:12px}
+   .cityhd .cn{color:var(--muted)}
+   :root{--muted:#5b6472}
+ }
+ @media (pointer:coarse) and (prefers-color-scheme:dark){ :root{--muted:#a4adba} }
  .stopfilter.inpanel .poib{grid-column:1 / -1}
  /* the master switch: the section heading itself, made clickable */
  .stopfilter .poihd{display:flex;align-items:center;gap:7px;margin:0 0 7px;cursor:pointer}
@@ -379,26 +400,82 @@
  .stop .ix i.go:hover{outline:2px solid currentColor;outline-offset:1px}
  @media (pointer:coarse){ .stop .ix i.go{padding:3.5px 6px;font-size:10.5px} }
  @media (max-width:640px){
-   /* On a phone there isn't room for two independent scrollers stacked inside one short
-      card — the tree and the line list end up a few rows tall each and neither is usable.
-      So the panel itself becomes the single scroll region: its children lay out at their
-      full height and the whole card scrolls, with the title bar pinned so it stays clear
-      what is being scrolled. */
-   .panel{width:calc(100% - 32px);max-height:62%;display:block;
-     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
-     overscroll-behavior:contain}
-   .panel .head{position:sticky;top:0;z-index:2;background:var(--card);
-     backdrop-filter:blur(10px);padding:11px 15px 9px}
-   .panel .head h1{font-size:14px}
+   /* ONE SHEET ON THE BOTTOM EDGE, three heights. The height is a custom property so the
+      snap is one attribute on <body> rather than a rule per card, and dvh rather than % so
+      the sheet does not jump every time Safari's toolbar collapses. */
+   body{--snap:120px}
+   body[data-snap="half"]{--snap:55dvh}
+   body[data-snap="full"]{--snap:92dvh}
+   .panel,.detail,.poidt{
+     position:fixed;top:auto;bottom:0;left:0;right:0;width:auto;
+     height:var(--snap);max-height:92dvh;border-radius:16px 16px 0 0;
+     border-left:none;border-right:none;border-bottom:none;
+     transition:height .22s cubic-bezier(.32,.72,0,1)}
+   /* The single scroll region is the sheet itself: two scrollers inside one short card give
+      a few rows each and neither is usable. The head stays pinned so it is always clear what
+      is being scrolled, and the bottom pad clears the home indicator. */
+   .panel{display:block;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+     overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom,0)}
+   /* BELOW the handle, not under it: both are sticky, and at top:0 the title printed
+      through the grab bar. */
+   .panel .head{position:sticky;top:26px;z-index:2;background:var(--card);
+     backdrop-filter:blur(10px);padding:4px 15px 9px}
+   /* AT PEEK THE SHEET IS THE SEARCH FIELD. 120px is enough for the handle, the field and
+      nothing else — and the field is the useful half: a reader who wants the map does not
+      need to be told what the map is, and one who wants a station is already typing. The
+      title comes back the moment the sheet is raised. */
+   body[data-snap="peek"] .panel{overflow:hidden}
+   body[data-snap="peek"] .panel .head{display:none}
+   body[data-snap="peek"] .search{padding-top:2px}
    .tree,.lines{overflow:visible;min-height:0;max-height:none}
-   .detail{left:0;right:0;top:auto;bottom:0;width:auto;max-height:62%;
-     border-left:none;border-top:1px solid var(--hair);box-shadow:0 -6px 24px #0000001f}
-   /* stacked, the two cards would cover the whole phone screen and leave no map to
-      look at — so the list panel yields most of its height while a line page is open */
-   body.detail-open .panel{max-height:26%}
-   .dbody{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-   #mini{height:118px}
+   .detail.open,.poidt.open{display:flex;flex-direction:column}
+   .dbody,.poidt .pbody{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+     padding-bottom:calc(12px + env(safe-area-inset-bottom,0))}
+   #mini{height:104px}
+   .poidt .phead{height:132px}
+
+   /* NEVER TWO SHEETS. The old rule shrank the list to 26% and left it there under the line
+      page: too short to read, and still taking a quarter of the screen away from the map.
+      The list is simply not on screen while a line or a point is open, and comes back at the
+      height it was when the reader closes them. */
+   body.detail-open .panel,body.poi-open .panel{display:none}
+
+   /* The map credit has to stay visible — it is the OpenStreetMap and CARTO licence, not
+      decoration — and the sheet now covers the corner it lived in. It rides on top of the
+      sheet instead, moving with it. */
+   .leaflet-bottom{bottom:var(--snap);transition:bottom .22s cubic-bezier(.32,.72,0,1)}
+
+   /* The grab handle. Its own element rather than a ::before, because it has to be a drag
+      target, and 28px of it so a thumb can find it. */
+   .grab{position:relative;flex:0 0 auto;height:26px;cursor:grab;touch-action:none;
+     display:flex;align-items:center;justify-content:center;
+     background:var(--card);border-radius:16px 16px 0 0}
+   .panel .grab{position:sticky;top:0;z-index:3}
+   .grab::after{content:"";width:38px;height:4px;border-radius:2px;background:var(--muted);
+     opacity:.45}
+   .grab:active{cursor:grabbing}
+
+   /* LINES AND FILTERS AS TABS. Same blocks, same filtering — only which one is displayed. */
+   .sheettabs{display:flex;gap:4px;padding:0 15px 9px}
+   .sheettabs button{flex:1;min-height:36px;border:1px solid var(--hair);border-radius:9px;
+     background:none;color:var(--muted);font:inherit;font-size:13px;font-weight:600;
+     cursor:pointer}
+   .sheettabs button[aria-selected="true"]{background:#0072B2;border-color:#0072B2;color:#fff}
+   body[data-tab="filters"] .lines{display:none}
+   body[data-tab="lines"] .tree,body[data-tab="lines"] .stopfilter{display:none}
+   /* "Bus via" is a filter, so it lives with the filters. In the Lines tab it was 52px of
+      header on a sheet whose header already ran to a third of its height, and the search
+      field takes the width back. */
+   body[data-tab="lines"] .cityfilter{display:none}
+   /* One line, not two. The full title wraps on a 390px screen and pushes the first row of
+      whatever the reader came for below the fold. */
+   .panel .head h1{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+   /* At peek there is nothing to choose between, and the tabs would be the only thing
+      visible under the search field. */
+   body:not([data-snap]) .sheettabs,body[data-snap="peek"] .sheettabs{display:none}
  }
+ /* The tab bar is a phone control; on a desktop the two lists live side by side already. */
+ @media (min-width:641px){ .grab,.sheettabs{display:none} }
 </style></head><body>
 <div id="map"></div>
 <div class="panel">
@@ -474,6 +551,18 @@ const TILE_URL =
   'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2ccb_1_4548f3e34490b8ddd08c056a';
 
 function lineColour(l){ return (l && (l.colour || COL[l.sub])) || '#67717f'; }
+// Relative luminance, sRGB, the WCAG formula. Used to decide whether a swatch takes white
+// ink or near-black: on RL4's #FFDD00 white is about 1.2:1 and unreadable, black about 17:1.
+function readableInk(hex){
+  const h = String(hex || '').replace('#', '');
+  if(h.length !== 6) return '#fff';
+  const c = [0, 2, 4].map(i => {
+    const v = parseInt(h.slice(i, i + 2), 16) / 255;
+    return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4);
+  });
+  const L = .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+  return L > .45 ? '#14181f' : '#fff';
+}
 // A line's categories. `sub` is the primary — it picks the colour and the order the
 // list is built in — and `subs` is every category it belongs to, which is what
 // visibility and the counts must read. Older data files have no `subs`, so fall back.
@@ -758,7 +847,8 @@ function stationPopupHtml(s, wipOnly){
   const rows = refs.map(r => {
     const l = LINE[r];
     return '<button type="button" class="pl" data-ref="' + esc(r) + '">' +
-      '<i style="background:' + lineColour(l) + '">' + esc(r) + '</i>' +
+      '<i style="background:' + lineColour(l) + ';color:' + readableInk(lineColour(l)) +
+        '">' + esc(r) + '</i>' +
       '<span>' + esc(l ? l.name : '') + '</span></button>';
   }).join('');
   return '<div class="nm">' + esc(s.name) +
@@ -1036,6 +1126,7 @@ function selectLine(ref){
 function closeDetail(){
   detail.classList.remove('open');
   document.body.classList.remove('detail-open');
+  if(window.__sheetFall) window.__sheetFall();
 }
 
 // Timetable links are stored as bare URLs so the data stays source-shaped; the label
@@ -1162,6 +1253,7 @@ function fillStops(l){
         const short = r.replace(/^Andorra\s+/, '');
         chip.textContent = short.length > 7 ? short.slice(0, 6) + '…' : short;
         chip.style.background = lineColour(LINE[r]);
+        chip.style.color = readableInk(lineColour(LINE[r]));
         chip.title = 'Open ' + r + (LINE[r] ? ' — ' + LINE[r].name : '');
         chip.className = 'go';
         chip.addEventListener('click', ev => {
@@ -1176,7 +1268,7 @@ function fillStops(l){
         // in place, so every interchange on the line page is reachable in one tap.
         const more = document.createElement('i');
         more.textContent = '+' + (others.length - 3);
-        more.style.background = '#8a8f98';
+        more.style.background = '#5b6472';
         more.className = 'go';
         more.title = 'Show ' + others.slice(3).join(', ');
         more.addEventListener('click', ev => {
@@ -1246,6 +1338,7 @@ function openDetail(l){
   fillStops(l);
   detail.classList.add('open');
   document.body.classList.add('detail-open');
+  if(window.__sheetRise) window.__sheetRise();
   showMini(l);
   body.scrollTop = 0;
 }
@@ -1692,6 +1785,7 @@ function openPoi(p){
   poiBodyEl.scrollTop = 0;
   poidt.classList.add('open');
   document.body.classList.add('poi-open');
+  if(window.__sheetRise) window.__sheetRise();
   poiFocus.clear();
   p.via.forEach(r => { if(LINE[r]) poiFocus.add(r); });
   poiTrackDraw(p);
@@ -1703,6 +1797,7 @@ function closePoi(){
   poiOpenName = null;
   poidt.classList.remove('open');
   document.body.classList.remove('poi-open');
+  if(window.__sheetFall) window.__sheetFall();
   poiFocus.clear();
   poiTrackClear();
   apply();
@@ -1717,6 +1812,132 @@ poiBodyEl.addEventListener('mouseover', ev => {
 });
 poiBodyEl.addEventListener('mouseleave', () => poiTrackPick(-1));
 document.getElementById('poiClose').addEventListener('click', closePoi);
+
+/* ---------------------------------------------------------------- the bottom sheet
+   Phone only, and it adds nothing to the desktop page but two hidden elements. The snap
+   lives on <body> because only one of the three sheets is ever open: one state, one truth.
+
+   It opens at PEEK deliberately. The page's whole point is the network; a visitor who lands
+   on a list of category checkboxes has been shown the filing system instead of the thing. */
+const SHEET = window.matchMedia('(max-width:640px)');
+const SNAPS = ['peek', 'half', 'full'];
+let snapBefore = 'peek';
+
+function setSnap(s){
+  document.body.dataset.snap = s;
+  // Leaflet measures its container on resize; the sheet is fixed, so the map never changes
+  // size, but a panel that has just grown may now cover the point the reader tapped.
+  setTimeout(() => map.invalidateSize({pan: false}), 240);
+}
+
+function sheetInit(){
+  if(document.querySelector('.grab')) return;
+  ['.panel', '#detail', '#poidt'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if(!el) return;
+    const g = document.createElement('div');
+    g.className = 'grab';
+    g.setAttribute('role', 'separator');
+    g.setAttribute('aria-label', 'Drag to resize, tap to cycle height');
+    el.insertBefore(g, el.firstChild);
+    grabDrag(g);
+  });
+  // the tabs go under the panel's own head, so the title and the search stay above them
+  const panel = document.querySelector('.panel');
+  const search = panel && panel.querySelector('.search');
+  if(search && !document.querySelector('.sheettabs')){
+    const t = document.createElement('div');
+    t.className = 'sheettabs';
+    t.setAttribute('role', 'tablist');
+    t.innerHTML = '<button type="button" role="tab" data-tab="filters">Filters</button>' +
+                  '<button type="button" role="tab" data-tab="lines">Lines</button>';
+    search.insertAdjacentElement('afterend', t);
+    t.addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-tab]');
+      if(b) setTab(b.dataset.tab);
+    });
+  }
+  // Filters first and selected: raising the sheet is nearly always a request to change
+  // WHAT is drawn rather than to read a list of 745 refs, and the tree is where the reader
+  // turns the local buses on. The line list is one tap away.
+  setTab('filters');
+  setSnap('peek');
+  // Tapping the search field is a request to use the sheet, so it comes up to meet the
+  // reader rather than making them find the handle first.
+  const q = document.getElementById('q');
+  if(q) q.addEventListener('focus', () => {
+    if(document.body.dataset.snap === 'peek') setSnap('half');
+  });
+}
+
+function setTab(which){
+  document.body.dataset.tab = which;
+  document.querySelectorAll('.sheettabs button').forEach(b => {
+    b.setAttribute('aria-selected', String(b.dataset.tab === which));
+  });
+}
+
+/* Drag, and tap-to-cycle in the same handler: a tap is just a drag that did not move, so
+   telling them apart on distance costs one comparison and saves a second listener. */
+function grabDrag(g){
+  let y0 = 0, h0 = 0, moved = 0, dragging = false;
+  g.addEventListener('pointerdown', ev => {
+    if(!SHEET.matches) return;
+    dragging = true; moved = 0; y0 = ev.clientY;
+    h0 = g.parentElement.getBoundingClientRect().height;
+    g.setPointerCapture(ev.pointerId);
+    g.parentElement.style.transition = 'none';
+    ev.preventDefault();
+  });
+  g.addEventListener('pointermove', ev => {
+    if(!dragging) return;
+    const dy = y0 - ev.clientY;
+    moved = Math.max(moved, Math.abs(dy));
+    const h = Math.min(window.innerHeight * .92, Math.max(90, h0 + dy));
+    g.parentElement.style.height = h + 'px';
+  });
+  const end = ev => {
+    if(!dragging) return;
+    dragging = false;
+    const el = g.parentElement;
+    const h = el.getBoundingClientRect().height;
+    el.style.transition = '';
+    el.style.height = '';
+    if(moved < 8){                                   // a tap: cycle to the next height
+      const i = SNAPS.indexOf(document.body.dataset.snap || 'peek');
+      setSnap(SNAPS[(i + 1) % SNAPS.length]);
+      return;
+    }
+    const vh = window.innerHeight;
+    const px = {peek: 120, half: vh * .55, full: vh * .92};
+    let best = 'peek', bd = Infinity;
+    SNAPS.forEach(s => { const d = Math.abs(px[s] - h); if(d < bd){ bd = d; best = s; } });
+    setSnap(best);
+  };
+  g.addEventListener('pointerup', end);
+  g.addEventListener('pointercancel', end);
+}
+
+/* One sheet at a time. selectLine and openPoi already set the body classes that hide the
+   list; these two only remember and restore the height, so a reader who had the sheet full
+   before opening a line gets it full again when they close it. */
+(function(){
+  const _sel = window.selectLine, _open = window.openPoi;
+  const rise = () => {
+    if(!SHEET.matches) return;
+    snapBefore = document.body.dataset.snap || 'peek';
+    setSnap('half');
+  };
+  const fall = () => { if(SHEET.matches) setSnap(snapBefore); };
+  document.addEventListener('click', ev => {
+    if(ev.target.closest('#dclose,#poiClose')) setTimeout(fall, 0);
+  }, true);
+  window.__sheetRise = rise;
+  window.__sheetFall = fall;
+})();
+
+if(SHEET.matches) sheetInit();
+SHEET.addEventListener('change', e => { if(e.matches) sheetInit(); });
 // "Show route" zooms to the line and leaves the panel open: the reader is still reading
 // about the place, and the line is already lit by the highlight.
 poiBodyEl.addEventListener('click', ev => {
